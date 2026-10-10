@@ -33,7 +33,7 @@ pipeline {
             steps {
                 git(
                     branch: "${params.BRANCH}",
-                    url: 'https://github.com/betawins/parametirize-job.git'
+                    url: 'https://github.com/khadeer329/spring3-mvc-maven-xml-hello-world-1.git'
                 )
             }
         }
