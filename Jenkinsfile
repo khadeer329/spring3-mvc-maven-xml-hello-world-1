@@ -27,55 +27,47 @@ pipeline {
 stage('publish to nexus') {
     steps {
         script {
-           
-
-            def groupId = pom.groupId
-            def artifactId = pom.artifactId
-            def version = pom.version
+            def groupId = 'com.ncodeit'
+            def artifactId = 'ncodeit-hello-world'
+            def version = '3.0'
             def packaging = 'war'
 
-            def filesByGlob = findFiles(glob: 'target/*.war')
+            def artifactPath = "target/${artifactId}-${version}.war"
 
-            if (filesByGlob.length == 0) {
-                error 'No WAR file found in target directory'
+            if (!fileExists(artifactPath)) {
+                error "WAR file not found: ${artifactPath}"
             }
 
-            def artifactPath = filesByGlob[0].path
-
-            echo "Artifact: ${artifactPath}"
+            echo "Uploading artifact: ${artifactPath}"
             echo "Group ID: ${groupId}"
             echo "Artifact ID: ${artifactId}"
             echo "Version: ${version}"
 
-            if (fileExists(artifactPath)) {
-                nexusArtifactUploader(
-                    nexusVersion: NEXUS_VERSION,
-                    protocol: NEXUS_PROTOCOL,
-                    nexusUrl: NEXUS_URL,
-                    groupId: groupId,
-                    version: version,
-                    repository: NEXUS_REPOSITORY,
-                    credentialsId: 'nexus-credentials',
-                    artifacts: [
-                        [
-                            artifactId: artifactId,
-                            classifier: '',
-                            file: artifactPath,
-                            type: packaging
-                        ],
-                        [
-                            artifactId: artifactId,
-                            classifier: '',
-                            file: 'pom.xml',
-                            type: 'pom'
-                        ]
+            nexusArtifactUploader(
+                nexusVersion: NEXUS_VERSION,
+                protocol: NEXUS_PROTOCOL,
+                nexusUrl: NEXUS_URL,
+                groupId: groupId,
+                version: version,
+                repository: NEXUS_REPOSITORY,
+                credentialsId: 'nexus-credentials',
+                artifacts: [
+                    [
+                        artifactId: artifactId,
+                        classifier: '',
+                        file: artifactPath,
+                        type: packaging
+                    ],
+                    [
+                        artifactId: artifactId,
+                        classifier: '',
+                        file: 'pom.xml',
+                        type: 'pom'
                     ]
-                )
+                ]
+            )
 
-                echo 'Artifact uploaded to Nexus successfully'
-            } else {
-                error "Artifact not found: ${artifactPath}"
-            }
+            echo 'Artifact uploaded to Nexus successfully'
         }
     }
 }
