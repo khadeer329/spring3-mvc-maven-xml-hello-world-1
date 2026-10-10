@@ -21,53 +21,49 @@ node {
         }
     }
 
-    stage('Publish to Nexus') {
-        script {
-            // Read Maven project details
-            def pom = readMavenPom file: 'pom.xml'
+stage('Publish to Nexus') {
+    script {
+        // Maven project coordinates
+        def groupId = 'com.ncodeit'
+        def artifactId = 'ncodeit-hello-world'
+        def version = '3.0'
+        def packaging = 'war'
 
-            // Locate the built artifact
-            def filesByGlob = findFiles(glob: "target/*.${pom.packaging}")
+        // Built artifact
+        def artifactPath = "target/${artifactId}-${version}.${packaging}"
 
-            if (filesByGlob.length == 0) {
-                error "No ${pom.packaging} artifact found in target/"
-            }
-
-            def artifactPath = filesByGlob[0].path
-
-            if (!fileExists(artifactPath)) {
-                error "Artifact not found: ${artifactPath}"
-            }
-
-            echo "Uploading artifact: ${artifactPath}"
-            echo "Group ID: ${pom.groupId}"
-            echo "Artifact ID: ${pom.artifactId}"
-            echo "Packaging: ${pom.packaging}"
-
-            // Publish artifact and POM to Nexus Repository 3
-            nexusArtifactUploader(
-                nexusVersion: env.NEXUS_VERSION,
-                protocol: env.NEXUS_PROTOCOL,
-                nexusUrl: env.NEXUS_URL,
-                groupId: pom.groupId,
-                version: pom.version,
-                repository: env.NEXUS_REPOSITORY,
-                credentialsId: 'nexus-credentials',
-                artifacts: [
-                    [
-                        artifactId: pom.artifactId,
-                        classifier: '',
-                        file: artifactPath,
-                        type: pom.packaging
-                    ],
-                    [
-                        artifactId: pom.artifactId,
-                        classifier: '',
-                        file: 'pom.xml',
-                        type: 'pom'
-                    ]
-                ]
-            )
+        if (!fileExists(artifactPath)) {
+            error "Artifact not found: ${artifactPath}"
         }
+
+        echo "Uploading artifact: ${artifactPath}"
+        echo "Group ID: ${groupId}"
+        echo "Artifact ID: ${artifactId}"
+        echo "Version: ${version}"
+
+        nexusArtifactUploader(
+            nexusVersion: env.NEXUS_VERSION,
+            protocol: env.NEXUS_PROTOCOL,
+            nexusUrl: env.NEXUS_URL,
+            groupId: groupId,
+            version: version,
+            repository: env.NEXUS_REPOSITORY,
+            credentialsId: 'nexus-credentials',
+            artifacts: [
+                [
+                    artifactId: artifactId,
+                    classifier: '',
+                    file: artifactPath,
+                    type: packaging
+                ],
+                [
+                    artifactId: artifactId,
+                    classifier: '',
+                    file: 'pom.xml',
+                    type: 'pom'
+                ]
+            ]
+        )
     }
+}
 }
