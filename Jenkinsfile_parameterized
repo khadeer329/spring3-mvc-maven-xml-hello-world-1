@@ -3,11 +3,10 @@ pipeline {
     agent any
 
     parameters {
-        gitParameter(
-            branchFilter: 'origin/(.*)',
-            defaultValue: 'origin/master',
+        choice(
             name: 'BRANCH',
-            type: 'PT_BRANCH'
+            choices: ['master', 'main'],
+            description: 'Select the Git branch'
         )
 
         booleanParam(
@@ -18,7 +17,7 @@ pipeline {
 
         booleanParam(
             defaultValue: false,
-            description: 'Publish artifact to Nexus',
+            description: 'Publish the artifact to Nexus',
             name: 'publish_to_nexus'
         )
     }
@@ -40,10 +39,14 @@ pipeline {
 
         stage('Maven Build') {
             when {
-                expression { params.mvn_build }
+                expression {
+                    params.mvn_build
+                }
             }
+
             steps {
                 sh '''
+                    set -e
                     mvn -version
                     mvn -Dmaven.test.failure.ignore=true clean package
                 '''
@@ -52,29 +55,42 @@ pipeline {
 
         stage('Publish to Nexus') {
             when {
-                expression { params.publish_to_nexus }
+                expression {
+                    params.publish_to_nexus
+                }
             }
+
             steps {
                 script {
                     def pom = readMavenPom file: 'pom.xml'
+
+                    if (!pom.groupId) {
+                        error 'groupId is missing from pom.xml'
+                    }
+
+                    if (!pom.artifactId || !pom.version || !pom.packaging) {
+                        error 'artifactId, version, or packaging is missing from pom.xml'
+                    }
 
                     def artifactPath =
                         "target/${pom.artifactId}-${pom.version}.${pom.packaging}"
 
                     if (!fileExists(artifactPath)) {
-                        error "Artifact not found: ${artifactPath}. Run Maven Build first."
+                        error "Artifact not found: ${artifactPath}. Enable mvn_build or build the artifact first."
                     }
 
                     echo "Artifact: ${artifactPath}"
                     echo "Group ID: ${pom.groupId}"
                     echo "Artifact ID: ${pom.artifactId}"
                     echo "Version: ${pom.version}"
+                    echo "Repository: ${NEXUS_REPOSITORY}"
 
                     nexusArtifactUploader(
                         nexusVersion: NEXUS_VERSION,
                         protocol: NEXUS_PROTOCOL,
                         nexusUrl: NEXUS_URL,
                         groupId: pom.groupId,
+                        artifactId: pom.artifactId,
                         version: pom.version,
                         repository: NEXUS_REPOSITORY,
                         credentialsId: NEXUS_CREDENTIAL_ID,
@@ -102,8 +118,13 @@ pipeline {
         success {
             echo 'Pipeline completed successfully.'
         }
+
         failure {
-            echo 'Pipeline failed. Check the stage logs and Nexus credentials.'
+            echo 'Pipeline failed. Check the console output for details.'
+        }
+
+        always {
+            echo 'Pipeline execution finished.'
         }
     }
 }
