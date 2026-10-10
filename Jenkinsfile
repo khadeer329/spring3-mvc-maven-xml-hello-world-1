@@ -27,7 +27,7 @@ pipeline {
 stage('publish to nexus') {
     steps {
         script {
-            def pom = readMavenPom file: 'pom.xml'
+           
 
             def groupId = pom.groupId
             def artifactId = pom.artifactId
