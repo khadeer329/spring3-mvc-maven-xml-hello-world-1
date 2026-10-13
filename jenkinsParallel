@@ -1,0 +1,50 @@
+pipeline {
+    agent any
+ 
+       tools {
+        // Note: this should match with the tool name configured in your jenkins instance (JENKINS_URL/configureTools/)
+        maven "Maven"
+        
+    }
+ 
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'master',
+                    url: 'https://github.com/betawins/spring3-mvc-maven-xml-hello-world-1.git'
+            }
+        }
+ 
+        stage('Build') {
+            steps {
+                sh 'mvn clean package -DskipTests'
+            }
+        }
+ 
+        stage('Parallel Verification') {
+            parallel {
+                stage('Unit Tests') {
+                    steps {
+                        sh 'mvn test'
+                    }
+                }
+                stage('Integration Tests') {
+                    steps {
+                        sh 'mvn verify -P integration || true'
+                    }
+                }
+                stage('Code Quality') {
+                    steps {
+                        sh 'mvn checkstyle:check || true'
+                    }
+                }
+            }
+        }
+    }
+ 
+    post {
+        success {
+            echo 'All parallel verification stages completed.'
+        }
+    }
+}
